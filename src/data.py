@@ -4,18 +4,14 @@
 ##############
 import os
 import sys
-import wfdb
-import ast
+import pywt
+import pickle
 import numpy as np
 import pandas as pd
-
+from numba import jit
 from pathlib import Path
-
+from sklearn.decomposition import PCA
 from pandas.api.types import is_hashable
-import seaborn as sns
-import plotly.express as px
-import plotly.graph_objects as go
-import plotly.io as pio
 
 from typing import Dict, Optional, Union, BinaryIO, Tuple, List
 
@@ -24,161 +20,140 @@ from typing import Dict, Optional, Union, BinaryIO, Tuple, List
 ##################
 root_path = Path(os.path.abspath(__file__)).parents[1]
 sys.path.insert(0, str(root_path))
+data_path = root_path.joinpath("raw_data")
 
-################
-#   loading    #
-################
+##################
+#   denoising    #
+##################
 
-def load_meta(root_path):
-    """
-    Load metadata related to electrocardiogram (ECG) data.
+def denoise_1sign(sign):
+    #decomposition en ondelette
+    coeffs = pywt.wavedec(sign, "sym4", mode="per")
+    #filtration qui s'apparente à une projection orthogonale 
+    coeffs[1:] = (pywt.threshold(coeff, value=0.2, mode="soft") for coeff in coeffs[1:])
+    #reconstruction du signal filtré
+    return pywt.waverec(coeffs, "sym4", mode="per" )
 
-    Args:
-        root_path (str or Path): Root path containing the 'raw_data' directory.
+########################
+#   ACP et pipeline    #
+########################
 
-    Returns:
-        dict: Dictionary containing loaded dataframes.
-            - 'ecg_meta': Metadata related to ECG data.
-            - 'scp': SCP statements dataframe.
-    """
+def pca_tens(tens, ncomp=5):
+    # initialisation du tenseur réduit
+    shape = list(tens.shape)
+    shape[2] = ncomp
+    pca_tens = np.zeros(shape)
+    # ACP pour chaque ecg_id
+    pca = PCA(n_components=ncomp)
+    ratios = np.zeros((shape[0], ncomp))
+    for i,mat in enumerate(tens):
+        pca_tens[i,:,:] = pca.fit_transform(mat)
+        ratios[i,:] = np.array(pca.explained_variance_ratio_)
+    print("PCA mean ratios",np.mean(ratios, axis = 0))
+    return pca_tens
+
+def denoise_and_pca(df, ncomp=5):
+    #reshape à 3D avec la première dimension associée à l'identifiant de l'ecg
+    tens = df.iloc[:,1:].to_numpy().reshape(-1,1000,12)
+    #on applique le denoising sur chaque signaux dont l'abcisse est associé à la dimension 1
+    tens = np.apply_along_axis(denoise_1sign, arr = tens, axis = 1 )
+    # on termine avec une ACP pour passer de 12 canaux à "ncomp" signaux 
+    # de manière à éliminer les redondances entre électrodes
+    return  pca_tens(tens,ncomp=ncomp)
+
+########################
+#   Final functions    #
+########################
+
+def csv_to_processed_pickle(data_path, name="train", ncomp=5): 
+    #name = train, valid, ou test
+
+    #loading
+    df = pd.read_csv(data_path.joinpath(f"{name}_signal.csv"))
+    #processing
+    tens = denoise_and_pca(df, ncomp=4)
+    #ids to connect tens with meta data
+    ecg_ids = np.unique(df["ecg_id"])
+    #saving
+    with open(str(data_path.joinpath(f"{name}_tens.pkl")), "wb") as f:
+        pickle.dump(tens, f)
+    with open(str(data_path.joinpath(f"{name}_ids.pkl")), "wb") as f:
+        pickle.dump(ecg_ids, f)
+
+
+def loader(data_path, name="train"):
+    with open(str(data_path.joinpath(f"{name}_tens.pkl")), "rb") as f:
+        tens = pickle.load(f)
+    with open(str(data_path.joinpath(f"{name}_ids.pkl")), "rb") as f:
+        ecg_ids = pickle.load(f)
+    df_meta = pd.read_csv(data_path.joinpath(f"{name}_meta.csv"))
+    return tens, ecg_ids, df_meta
+
+
+###############
+#   Script    #
+###############
+
+csv_to_processed_pickle(data_path, name="train", ncomp=5)
+
+
+#############
+#   test    #
+#############
     
-    meta_path = root_path.joinpath("raw_data", "meta_data")
-    ecg_path = str(meta_path.joinpath('ptbxl_database.csv'))
-    scp_path = str(meta_path.joinpath('scp_statements.csv'))
-    
-    df_ecg_meta = pd.read_csv(ecg_path, index_col='ecg_id')
-    df_ecg_meta.scp_codes = df_ecg_meta.scp_codes.apply(lambda x: ast.literal_eval(x))
-    
-    return  {"ecg_meta": df_ecg_meta,
-              "scp": pd.read_csv(scp_path, index_col=0)
-              }
-    
-def load_ecg(dct_data, root_path, sampling_rate=100, ecg_ids=None):
-    """
-    Load electrocardiogram (ECG) data based on metadata.
 
-    Args:
-        dct_data (dict): Dictionary containing data.
-        root_path (str or Path): Root path containing the 'raw_data' directory.
-        sampling_rate (int): Sampling rate of the ECG data.
-        ecg_ids (list or None): List of ECG IDs to load. If None, load all.
+#plotting_________________
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+import seaborn as sns
+pio.renderers.default = "browser"  
+def my_pal(n):
+    return sns.color_palette("Spectral", n).as_hex()
 
-    Returns:
-        None: Updates the 'ecg' key in dct_data with loaded ECG data.
-    """
-    df_ecg_meta = dct_data["ecg_meta"]
-    ecg_path = root_path.joinpath("raw_data","ecg_data")
-    
-    if sampling_rate == 100:
-        col = "filename_lr"
-    else:
-        col = "filename_hr"
-    if ecg_ids:
-        filenames = df_ecg_meta.loc[ecg_ids, col]
-    else:
-        filenames = df_ecg_meta[col]
-    
-    print(filenames)
-    load_signal = lambda path : wfdb.rdsamp(
-        str(ecg_path.joinpath(path))
-        )[0] 
+def plot_signal(vec, title = "signal"):
+    fig = px.line(vec, template = "plotly_dark", title = title)
+    fig.show()
+
+def add_fig(fig, signal, color, name):
+    fig.add_trace(go.Scatter(y=signal, 
+                 mode="lines", 
+                 line=dict(
+                     width=2,
+                     color=color,
+                 ),
+                 opacity = 0.6,
+                 name=name
+                )
+             )
 
     
-    dct_data["ecg"] = filenames.apply(load_signal).to_numpy()
+#loading_________________
+tens_train, ids_train, meta_train = loader(data_path, name="train")
 
+#les identifiants ici sont dans même ordre
+print(tens_train.shape)
+print(ids_train.shape)
 
-
-
-#######################
-#   get superclass    #
-#######################
-
-def aggregate_diagnostic(agg_df, y_dic):
-    tmp = []
-    for key in y_dic.keys():
-        if key in agg_df.index:
-            tmp.append(agg_df.loc[key].diagnostic_class)
-    return list(set(tmp))
-
-def add_superclasse(dct_data):
-    agg_df = dct_data["scp"].copy()
-    agg_df = agg_df[agg_df.diagnostic == 1]
-    f_agg = lambda y_dic: aggregate_diagnostic(agg_df, y_dic)
-    dct_data["ecg_meta"]['diagnostic_superclass'] = dct_data["ecg_meta"].scp_codes.apply(f_agg)
-    
-
-
-############################
-#   raw data description   #
-############################
-
-def df_nan_percent(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calcule le pourcentage de valeurs manquantes dans chaque colonne d'un DataFrame.
-
-    Args:
-        df (pd.DataFrame): DataFrame contenant les données.
-
-    Returns:
-        pd.DataFrame: DataFrame contenant le pourcentage de valeurs manquantes pour chaque colonne.
-    """
-    part_nan = df.isnull().mean()
-    perc_nan = pd.DataFrame(np.round(100 * part_nan.to_numpy(), 1))
-    perc_nan.index = part_nan.index
-    return perc_nan
-
-def describ_raw_df(df):
-    print("\n---------Shape------------------\n", df.shape)
-    print("\n---------Types------------------\n", df.dtypes)
-    print("\n--------- 1 row-----------------\n", df.iloc[0, :])
-    print("\n---------describe---------------\n", df.describe())
-    print("\n---------nan percentage---------\n", df_nan_percent(df))
-    for col in df:
-        unique_val = df[col].explode().unique()
-        if len(unique_val) < 20:
-            print(f"\n---------{col} values----------")
-            print(unique_val)
-            
-
-def plot_all_st(X, clustering=None, title="<b>Signals</b>"):
-    """
-    Plot multiple signals in a single interactive Plotly figure.
-
-    Args:
-        X (list of arrays): A list of signal arrays to be plotted.
-        clustering (list or None, optional): A list of cluster assignments for each signal. 
-            If provided, signals will be color-coded by cluster. Default is None.
-        title (str, optional): The title of the plot. Default is "<b>Signals</b>".
-
-    Returns:
-        None: Displays an interactive Plotly figure with the plotted signals.
-    """
-    
+pal = my_pal(8)    
+for i, mat in enumerate(tens_train[:10]):
     fig = go.Figure(
         layout=go.Layout(
             height=600, 
             width=800, 
             template = "plotly_dark", 
-            title = title
+            title = f"ACP ecg_id = {ids_train[i]}"
     ))
-        
-    if clustering:
-        pal = ["palegreen", "darkred"]
-    else:
-        pal = sns.color_palette("Spectral", len(X)).as_hex()
 
-    for i in range(len(X)):
-        if clustering:
-            color = pal[clustering[i]]
-        else:
-            color = pal[i]
+    for j, sign in enumerate(mat.T):
+        color = pal[j]
             
-        fig.add_trace(go.Scatter(y=X[i], 
-                                 mode="lines", 
-                                 line=dict(
-                                     width=2,
-                                     color=color,
-                                 ),
-                                 opacity = 0.6
-                                ))
+        fig.add_trace(go.Scatter(y=sign, 
+                            mode="lines", 
+                            line=dict(
+                                width=2,
+                                color=color,
+                            ),
+                            opacity = 0.6
+                        ))  
     fig.show()
