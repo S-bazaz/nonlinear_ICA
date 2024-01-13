@@ -1,8 +1,26 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import tqdm
 
+from torch.utils.data import Dataset, DataLoader
+
+import torch
+import os
+
+class ECGSegmentedDataset(Dataset):
+    def __init__(self, seg_data, seg_label, seg_patient_id):
+        self.seg_data = seg_data
+        self.seg_label = seg_label
+        self.seg_patient_id = seg_patient_id
+
+    def __len__(self):
+        return self.seg_data.shape[0]
+
+    def __getitem__(self, idx):
+        data_idx = torch.tensor(self.seg_data[idx, :])
+        label_idx = torch.tensor(self.seg_label[idx])
+        patient_idx = torch.tensor(self.seg_patient_id[idx])
+        return data_idx, label_idx, patient_idx
 
 def dict_dataset_per_patient_old(df,
                             n_channels, 
@@ -77,32 +95,15 @@ def segment_dataset_2(dict_data, n_segments, points_per_segment):
 
 
     
-class ECGSegmentedDataset(Dataset):
-    def __init__(self, seg_data, seg_label, seg_patient_id):
-        self.seg_data = seg_data
-        self.seg_label = seg_label
-        self.seg_patient_id  = seg_patient_id
-
-    def __len__(self):
-        return self.seg_data.shape[0]
-
-    def __getitem__(self, idx):
-        data_idx = torch.tensor(self.seg_data[idx,:])
-        label_idx = torch.tensor(self.seg_label[idx])
-        patient_idx = torch.tensor(self.seg_patient_id[idx])
-        return data_idx, label_idx, patient_idx
 
 
 def make_ECGsegmentedDataset_from_dataframe(df, n_channels, n_segments, n_point_per_segment):
     dict_df = dict_dataset_per_patient(df, n_channels)
-    print('Selection of values per patient done')
     #seg_data, seg_label, seg_patient_id = segment_dataset(dict_df,n_segments=n_segments,points_per_segment=n_point_per_segment)
     seg_data, seg_label, seg_patient_id = segment_dataset_2(dict_df,n_segments=n_segments,points_per_segment=n_point_per_segment)
-    print('Segmentation done')
     dataset = ECGSegmentedDataset(seg_data=seg_data,
                                     seg_label=seg_label,
                                     seg_patient_id=seg_patient_id)
-    print('class dataset done')
     return(dataset)
     
 
