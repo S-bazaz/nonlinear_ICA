@@ -66,7 +66,7 @@ if __name__ == "__main__":
         pool_size = tcl_i.getint('pool_size')
         slope = tcl_i.getfloat('slope')
         save_model_i = save_models + str(i)+ '/model'
-        save_params_i = save_models + str(i)+ '/params.json'
+        save_params_i = save_models + str(i)+ '/params.pkl'
         
         directory_path = os.path.dirname(save_params_i)
         # Create directories if they don't exist
@@ -80,8 +80,8 @@ if __name__ == "__main__":
                         'pool_size' : pool_size, 
                         'slope' : slope
                         }
-        with open(save_params_i, 'w') as json_file:
-            json.dump(save_params_i, json_file, indent=2)
+        with open(save_params_i, 'wb') as file:
+            pickle.dump(params_tcl_i, file)
 
         tcl_configs[name_i] = tcl_i
         model = tcl(input_dim=input_dim,

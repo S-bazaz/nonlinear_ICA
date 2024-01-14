@@ -1,6 +1,7 @@
 import json
 import numpy as np
-
+import torch
+from sklearn.decomposition import FastICA
 from torch.utils.data import Dataset, DataLoader
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,7 +35,8 @@ def compute_average_signal(original_tensor, w, s):
     
     return(averaged_tensor)
 
-def get_features_dataset(model, output_dim, dataset, sliding_window, stride, T=1000):
+def get_features_dataset(model, output_dim, dataset, sliding_window, stride, T=1000, 
+                         apply_ICA = False):
     """Given a pretrained TCL model with output dim (n_components) and a certain dataset
     will compute sliding window averaging for every channel of ouptut_dim 
     it is done by patient so the output for a dataset with n patients is 
@@ -54,19 +56,27 @@ def get_features_dataset(model, output_dim, dataset, sliding_window, stride, T=1
     i=0
     num_windows = get_number_windows(T,sliding_window,stride)
     label_patients = np.zeros(n_patient_dataset)
-    features_patients = np.zeros((n_patient_dataset,output_dim, num_windows ))
+    features_patients_avg = np.zeros((n_patient_dataset,output_dim, num_windows ))
+    features_patients_all = np.zeros((n_patient_dataset,output_dim, T))
     for batch_x, batch_y, batch_z in loader : 
         output_patient_logit, features_patient = model(batch_x.float(), patient_id = batch_z)
         patient_id = batch_z.unique()
         assert patient_id.shape[0]==1, 'Multiple patient in batch - resize batch size'
         label_patients[i] = patient_id[0]
+        if apply_ICA:
+            transformer = FastICA(n_components=output_dim,random_state=0, whiten='unit-variance')
+            X = features_patient.detach().numpy()
+            X_transformed = transformer.fit_transform(X)
+            features_patient = torch.tensor(X_transformed)
         features_patient_avg = compute_average_signal(features_patient.T, w=sliding_window, s=stride)
-        features_patients[i,:,:] = features_patient_avg.detach().numpy()
+        features_patients_all[i,:,:]= features_patient.T
+        features_patients_avg[i,:,:] = features_patient_avg.detach().numpy()
         i+=1 
     index_sort = np.argsort(label_patients)
     label_patients = label_patients[index_sort]
-    features_patients = features_patients[index_sort,:,:]
-    return(label_patients, features_patients)
+    features_patients_avg = features_patients_avg[index_sort,:,:]
+    features_patients_all = features_patients_all[index_sort,:,:]
+    return(label_patients, features_patients_avg, features_patients_all)
     
 def get_label_from_id_patient(id_patient, df_meta, list_columns):
     """Given a list of patient and a df with patients and columns
@@ -91,28 +101,33 @@ def get_label_from_id_patient(id_patient, df_meta, list_columns):
 
 
 # these 2 functions are just the parallelized version of get_features_dataset
-def process_batch(batch, model, output_dim, sliding_window, stride):
+def process_batch(batch, model, output_dim, sliding_window, stride, apply_ICA=False):
     batch_x, batch_y, batch_z = batch
     output_patient_logit, features_patient = model(batch_x.float(), patient_id=batch_z)
     patient_id = batch_z.unique()
     assert patient_id.shape[0] == 1, 'Multiple patients in batch - resize batch size'
+    if apply_ICA:
+            transformer = FastICA(n_components=output_dim,random_state=0, whiten='unit-variance')
+            X = features_patient.detach().numpy()
+            X_transformed = transformer.fit_transform(X)
+            features_patient = torch.tensor(X_transformed)
     features_patient_avg = compute_average_signal(features_patient.T, w=sliding_window, s=stride)
-    return patient_id[0], features_patient_avg.detach().numpy()
+    return patient_id[0], features_patient_avg.detach().numpy(), features_patient
 
-def get_features_dataset_parallel(model, output_dim, dataset, sliding_window, stride, T=1000):
+def get_features_dataset_parallel(model, output_dim, dataset, sliding_window, stride, T=1000, apply_ICA=False):
     batch_size = T
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     n_patient_dataset = len(loader)
 
     label_patients = np.zeros(n_patient_dataset)
-    features_patients = np.zeros((n_patient_dataset, output_dim, get_number_windows(T, sliding_window, stride)))
-
+    features_patients_avg = np.zeros((n_patient_dataset, output_dim, get_number_windows(T, sliding_window, stride)))
+    features_patients_all = np.zeros((n_patient_dataset, output_dim, T))
     with ThreadPoolExecutor() as executor:
         batches = list(loader)
-        results = list(executor.map(lambda batch: process_batch(batch, model, output_dim, sliding_window, stride), batches))
+        results = list(executor.map(lambda batch: process_batch(batch, model, output_dim, sliding_window, stride, apply_ICA=apply_ICA), batches))
 
-    for i, (patient_id, features_patient_avg) in enumerate(sorted(results, key=lambda x: x[0])):
+    for i, (patient_id, features_patient_avg, features_patient) in enumerate(sorted(results, key=lambda x: x[0])):
         label_patients[i] = patient_id
-        features_patients[i, :, :] = features_patient_avg
-
-    return label_patients, features_patients
+        features_patients_avg[i, :, :] = features_patient_avg
+        features_patients_all[i,:,:] = features_patient.T
+    return label_patients, features_patients_avg, features_patients_all

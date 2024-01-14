@@ -110,7 +110,8 @@ def classification_model(model, output_dim_model,
                          T = 1000,
                          metrics_to_compute = ['accuracy', 'f1_score','recall','precision'],
                          list_columns_classif = ['NORM'],
-                         path_save_models= 'models/classif/'):
+                         path_save_models= 'models/classif/',
+                         apply_ICA = False):
     """Perform GridSearchCV using SVM and pretrained TCL model for all of the columns target in theprovided list
     Will save everything in repertories : 
     path_save_models+target_i/ with best_model.joblib , best_params.pkl, res_best_model.pkl, res_gs_SVM.pkl 
@@ -131,20 +132,35 @@ def classification_model(model, output_dim_model,
         metrics_to_compute (list, optional): Metrics to compute - chose between accuracy, recall, precision, f1_score, roc_auc. Defaults to ['accuracy', 'f1_score','recall','precision'].
         list_columns_classif (list, optional): list of target columns on which to perfrom classif. Defaults to ['NORM'].
         path_save_models (str, optional): directory path for saves. Defaults to 'models/classif/'.
+        apply_ICA (bool) : False
     """
     df_train_meta = pd.read_csv(path_meta_data_train)
     df_val_meta = pd.read_csv(path_meta_data_val)
     df_test_meta = pd.read_csv(path_meta_data_test)
-    id_patient_train, X_train = get_features_dataset_parallel(model, output_dim_model, datasetECG_train, sliding_window, stride, T=T)
-    id_patient_val, X_val = get_features_dataset_parallel(model, output_dim_model, datasetECG_val, sliding_window, stride, T=T)
-    id_patient_test, X_test = get_features_dataset_parallel(model, output_dim_model, datasetECG_test, sliding_window, stride, T=T)
+    id_patient_train, X_train_avg, X_features_train = get_features_dataset_parallel(model, output_dim_model, datasetECG_train, sliding_window, stride, T=T, apply_ICA=apply_ICA)
+    with open(path_save_models+'train_info.pkl','wb') as f:
+        d = {'id_patient':id_patient_train,
+             'features_avg' : X_train_avg,
+             'features_all' : X_features_train}
+        pickle.dump(d,f)
+    id_patient_val, X_val_avg, X_features_val = get_features_dataset_parallel(model, output_dim_model, datasetECG_val, sliding_window, stride, T=T, apply_ICA=apply_ICA)
+    with open(path_save_models+'val_info.pkl','wb') as f:
+        d = {'id_patient':id_patient_val,
+             'features_avg' : X_val_avg,
+             'features_all' : X_features_val}
+        pickle.dump(d,f)  
+    id_patient_test, X_test_avg, X_features_test = get_features_dataset_parallel(model, output_dim_model, datasetECG_test, sliding_window, stride, T=T, apply_ICA=apply_ICA)
+    with open(path_save_models+'test_info.pkl','wb') as f:
+        d = {'id_patient':id_patient_test,
+             'features_avg' : X_test_avg,
+             'features_all' : X_features_test}
+        pickle.dump(d,f) 
     labels_train_dict = get_label_from_id_patient(id_patient_train, df_train_meta, list_columns_classif)
     labels_val_dict = get_label_from_id_patient(id_patient_val, df_val_meta, list_columns_classif)
     labels_test_dict = get_label_from_id_patient(id_patient_test, df_test_meta, list_columns_classif)
-    
-    X_train = X_train.reshape(X_train.shape[0], -1)
-    X_val = X_val.reshape(X_val.shape[0], -1)
-    X_test = X_test.reshape(X_test.shape[0], -1)
+    X_train = X_train_avg.reshape(X_train_avg.shape[0], -1)
+    X_val = X_val_avg.reshape(X_val_avg.shape[0], -1)
+    X_test = X_test_avg.reshape(X_test_avg.shape[0], -1)
     X_big_train = np.concatenate([X_train,X_val], axis=0)
     all_res = {}
     for col in list_columns_classif :

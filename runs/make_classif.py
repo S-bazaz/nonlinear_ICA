@@ -24,6 +24,7 @@ if __name__ == "__main__":
     TCL_info = ast.literal_eval(config['TCL']['TCL_info'])
     n_sw = config['TCL'].getint('n_possibilities_windows_stride')
     sliding_windows_stride = ast.literal_eval(config['TCL']['params_sliding_windows_stride'])
+    apply_ICA = ast.literal_eval(config['TCL']['apply_ICA'])
     ## Dataset info 
     datasets = config['datasets']
     datasets_info = ast.literal_eval(datasets['datasets_info'])
@@ -80,7 +81,8 @@ if __name__ == "__main__":
                                             T = T,
                                             metrics_to_compute = metrics_to_compute,
                                             list_columns_classif = columns_to_classif,
-                                            path_save_models = path_save_classif_i_dataset_j_TCL_k )
+                                            path_save_models = path_save_classif_i_dataset_j_TCL_k,
+                                            apply_ICA= apply_ICA)
                 with open(path_save_classif_i_dataset_j_TCL_k+'results_all_targets.pkl','wb') as f: 
                     pickle.dump(res,f)
                 
