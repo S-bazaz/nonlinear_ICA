@@ -2,7 +2,7 @@
 *.hea
 *.csv
 *.pth 
-
-*\raw_data\ecg_data\records100
-*\raw_data\ecg_data\records500
+*.pkl
+*.pickle
+*\raw_data
 
