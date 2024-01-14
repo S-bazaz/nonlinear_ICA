@@ -1,6 +1,8 @@
 *.dat
 *.hea
 *.csv
+*.pth 
 *.pkl
 *.pickle
 *\raw_data
+
