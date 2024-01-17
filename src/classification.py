@@ -52,6 +52,7 @@ def gridsearch_SVM_pipeline(X_train,y_train, X_val, y_val, param_grid, scoring='
     split_index = [-1]*len(X_train) + [0]*len(X_val)
     X = np.concatenate((X_train, X_val), axis=0)
     y = np.concatenate((y_train, y_val), axis=0)
+    print('in grid search svm pipeline',(X.shape,y.shape))
     pds = PredefinedSplit(test_fold = split_index)
     # Create a GridSearchCV object
     grid_search_model = GridSearchCV(svm_pipeline, param_grid, cv=pds, scoring=scoring, verbose=verbose)
@@ -160,17 +161,24 @@ def classification_model(model, output_dim_model,
              'features_all' : X_features_train}
         pickle.dump(d,f)
     id_patient_val, X_val_avg, X_features_val = get_features_dataset_parallel(model, output_dim_model, datasetECG_val, sliding_window, stride, T=T, apply_ICA=apply_ICA)
+    
     with open(path_save_models+'val_info.pkl','wb') as f:
         d = {'id_patient':id_patient_val,
              'features_avg' : X_val_avg,
              'features_all' : X_features_val}
         pickle.dump(d,f)  
+    
     id_patient_test, X_test_avg, X_features_test = get_features_dataset_parallel(model, output_dim_model, datasetECG_test, sliding_window, stride, T=T, apply_ICA=apply_ICA)
+    
     with open(path_save_models+'test_info.pkl','wb') as f:
         d = {'id_patient':id_patient_test,
              'features_avg' : X_test_avg,
              'features_all' : X_features_test}
         pickle.dump(d,f) 
+    
+    id_patient_train =  id_patient_train.numpy().astype(int)
+    id_patient_val = id_patient_val.numpy().astype(int)
+    id_patient_test = id_patient_test.numpy().astype(int)
     labels_train_dict = get_label_from_id_patient(id_patient_train, df_train_meta, list_columns_classif)
     labels_val_dict = get_label_from_id_patient(id_patient_val, df_val_meta, list_columns_classif)
     labels_test_dict = get_label_from_id_patient(id_patient_test, df_test_meta, list_columns_classif)

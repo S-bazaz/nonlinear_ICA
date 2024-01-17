@@ -79,7 +79,8 @@ if __name__ == "__main__":
                 # Create directories if they don't exist
                 if not os.path.exists(directory_path):
                     os.makedirs(directory_path)
-                TCL_k = torch.load(join_root(TCL_k_pretrained_info['path']))
+                #map_location should be initialized through a device parameter to be added in config
+                TCL_k = torch.load(join_root(TCL_k_pretrained_info['path']), map_location=torch.device('cpu'))
                 output_dim_model_k = TCL_k_pretrained_info['output_dim']
                 res = classification_model(model = TCL_k, 
                                            output_dim_model = output_dim_model_k, 
