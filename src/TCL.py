@@ -2,7 +2,7 @@ import torch
 import tqdm 
 import copy
 import itertools
-import cuda
+#import cuda
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
