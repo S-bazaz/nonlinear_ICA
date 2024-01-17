@@ -1,19 +1,35 @@
-from src.feature_extraction import get_features_dataset, get_label_from_id_patient, get_features_dataset_parallel
-
+# -*- coding: utf-8 -*-
+##############
+#  Packages  #
+##############
 import json
 import joblib
+import sys
 import os
 import pickle
-
+from pathlib import Path
 import pandas as pd
 import numpy as np
-
 from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.model_selection import PredefinedSplit, GridSearchCV
 from torch.utils.data import DataLoader
+
+################
+#    Imports   #
+################
+# # Set the working directory to the parent directory of the script (nonlinear_ICA)
+root_path = Path(os.path.abspath(__file__)).parents[1]
+sys.path.insert(0, str(root_path))
+from src.feature_extraction import get_features_dataset, get_label_from_id_patient, get_features_dataset_parallel
+
+##################
+#   Pipelines    #
+##################
+
+
 
 def gridsearch_SVM_pipeline(X_train,y_train, X_val, y_val, param_grid, scoring='accuracy', verbose=4):
     """Grid search SVM using X_train for training and x_val for valdidation 

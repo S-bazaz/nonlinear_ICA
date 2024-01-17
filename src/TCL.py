@@ -10,12 +10,16 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 print("cuda is available =",torch.cuda.is_available())
-# if torch.cuda.is_available():
-#     device = 'cuda:0'
-# else:
-#     device = 'cpu'
 
-device = 'cpu'
+#UNCOMMENT FOR TRAIN
+if torch.cuda.is_available():
+    device = 'cuda:0'
+else:
+    device = 'cpu'
+
+#UNCOMMENT FOR TEST
+# device = 'cpu'
+    
 # =============================================================================
 # =============================================================================
 def _do_train(model, loader, optimizer, criterion, device, num_batch_to_process = None):

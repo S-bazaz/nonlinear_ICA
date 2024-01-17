@@ -40,13 +40,13 @@ if __name__ == "__main__":
     df_test = readcsv(params_all['path_data_test'])
 
     print('There are {} dataset to compute'.format(n_dataset))
-    for i in range(1,n_dataset+1):
+    for i in range(2,n_dataset+1): #1
         path_save_dataset = path_save.joinpath('dataset_'+str(i))
-        directory_path = os.path.dirname(str(path_save_dataset))
+        directory_path = os.path.dirname(str(path_save_dataset)+"\\")
         # Create directories if they don't exist
         if not os.path.exists(directory_path):
             os.makedirs(directory_path)
-            
+
         #creates paths
         train_path = str(path_save_dataset.joinpath('dataset_train.pth'))
         valid_path = str(path_save_dataset.joinpath('dataset_val.pth'))
@@ -55,8 +55,8 @@ if __name__ == "__main__":
 
         params_dataset_dict= dict(config.items('dataset_'+str(i)))
         params_dataset = config['dataset_'+str(i)]
-
-        with open(str(path_save_dataset)+'/params_dataset.json','w') as f: 
+        print("save json", str(path_save_dataset)+'\\params_dataset.json')
+        with open(str(path_save_dataset)+'\\params_dataset.json','w') as f: 
             json.dump(params_dataset_dict,f)
     
         n_segment = params_dataset.getint('n_segment')
@@ -65,20 +65,20 @@ if __name__ == "__main__":
                                                                 n_channels= n_channels, 
                                                                 n_segments = n_segment, 
                                                                 n_point_per_segment = n_point)
-        print("save train {train_path}")
+        print(f"save train {train_path}")
         torch.save(dataset_train, train_path)
         
         dataset_val = make_ECGsegmentedDataset_from_dataframe(df=df_val,
                                                                 n_channels= n_channels, 
                                                                 n_segments = n_segment, 
                                                                 n_point_per_segment = n_point)
-        print("save validation {valid_path}")
+        print(f"save validation {valid_path}")
         torch.save(dataset_val, valid_path)
         
         dataset_test = make_ECGsegmentedDataset_from_dataframe(df=df_test,
                                                                 n_channels= n_channels, 
                                                                 n_segments = n_segment, 
                                                                 n_point_per_segment = n_point)
-        print("save test {test_path}")
+        print(f"save test {test_path}")
         torch.save(dataset_test, test_path)
         print('dataset '+str(i)+' done')
