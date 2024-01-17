@@ -76,7 +76,7 @@ if __name__ == "__main__":
     
     # Read TCL configurations
     tcl_configs = {}
-    for i in range(4,n_models+1): 
+    for i in range(5,n_models+1): 
         name_i = 'TCL_'+str(i)
         print(name_i)
         tcl_i = config[name_i]

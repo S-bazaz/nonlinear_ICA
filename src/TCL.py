@@ -11,7 +11,7 @@ from torch.autograd import Variable
 
 print("cuda is available =",torch.cuda.is_available())
 
-#UNCOMMENT FOR TRAIN
+# UNCOMMENT FOR TRAIN
 if torch.cuda.is_available():
     device = 'cuda:0'
 else:
@@ -196,6 +196,7 @@ class tcl(nn.Module):
             h: features (batch_size, num_channels)
         """
         x.to(device=device)
+        # print(x.device)
         h = self.MLP(x)
         if self.feature_nonlinearity == 'abs':
             h = torch.abs(h) # Nonlinearity of the last hidden layer (feature value)

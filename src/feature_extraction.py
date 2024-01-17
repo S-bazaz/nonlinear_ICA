@@ -95,7 +95,7 @@ def get_label_from_id_patient(id_patient, df_meta, list_columns):
         list_columns (list): list of target variables
     """
     df_ = df_meta.sort_values(by=['ecg_id'], ascending = True)
-    id_in_meta = df_['ecg_id'].values
+    id_in_meta = np.array(df_['ecg_id'].values, dtype=int)
     nb_label_per_patient = df_['ecg_id'].value_counts().values
     unique_values = len(np.unique(nb_label_per_patient))
     assert unique_values == 1 , 'Error: some patients have multi labels'
