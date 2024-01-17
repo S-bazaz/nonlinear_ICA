@@ -1,12 +1,28 @@
+# -*- coding: utf-8 -*-
+##############
+#  Packages  #
+##############
+import sys
+import os 
 import torch
-import numpy as np
 import tqdm
-
+import numpy as np
+from pathlib import Path
 from torch.utils.data import Dataset, DataLoader
 
-import torch
-import os
+##################
+#      Imports   #
+##################
+# # Set the working directory to the parent directory of the script (nonlinear_ICA)
+root_path = Path(os.path.abspath(__file__)).parents[1]
+sys.path.insert(0, str(root_path))
+config_path=root_path.joinpath("config", "config_dataset.ini")
+from src.data import denoise_1sign
 
+
+##############
+#   Class    #
+##############
 class ECGSegmentedDataset(Dataset):
     def __init__(self, seg_data, seg_label, seg_patient_id):
         self.seg_data = seg_data
@@ -37,9 +53,19 @@ def dict_dataset_per_patient(df, n_channels, column_id='ecg_id', prefix_channel=
     channels_names = [prefix_channel + str(i) for i in range(n_channels)]
     
     # Group by 'ecg_id' and aggregate the data into a dictionary
-    grouped_data = df.groupby(column_id)[channels_names].apply(lambda x: x.values).to_dict()
 
-    return grouped_data
+
+    grouped_data = df.groupby(column_id)[channels_names].apply(lambda x: x.values).to_dict()
+    grouped_data_denoised = {k:np.apply_along_axis(denoise_1sign, arr = mat, axis = 0 ) for k,mat in grouped_data.items()}
+
+
+
+    # print(grouped_data)
+
+    # Group by 'ecg_id' and aggregate the data into a dictionary
+
+    # return grouped_data
+    return grouped_data_denoised
 
 def segment_dataset(dict_data,
                     n_segments, 
@@ -93,8 +119,6 @@ def segment_dataset_2(dict_data, n_segments, points_per_segment):
 
     return all_points, all_labels, all_patient_id
 
-
-    
 
 
 def make_ECGsegmentedDataset_from_dataframe(df, n_channels, n_segments, n_point_per_segment):

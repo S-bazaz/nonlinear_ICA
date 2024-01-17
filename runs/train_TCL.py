@@ -1,30 +1,39 @@
-
+# -*- coding: utf-8 -*-
+##############
+#  Packages  #
+##############
 import torch 
 import json
 import configparser
+import sys
 import os 
 import pickle
-
-# Get the directory containing the current script
-script_dir = os.path.dirname(os.path.realpath(__file__))
-
-# Set the working directory to the parent directory of the script (nonlinear_ICA)
-os.chdir(os.path.abspath(os.path.join(script_dir, '..')))
-
 import torch.optim as optim
+from pathlib import Path
+from torch.utils.data import Dataset, DataLoader
+from ast import literal_eval 
+
+################
+#    Imports   #
+################
+# # Set the working directory to the parent directory of the script (nonlinear_ICA)
+root_path = Path(os.path.abspath(__file__)).parents[1]
+sys.path.insert(0, str(root_path))
+config_path=root_path.joinpath("config", "config_TCL.ini")
+data_set_path = root_path.joinpath("config", "config_dataset.ini")
 
 from src.TCL import tcl, MLP, train
 from src.dataset import ECGSegmentedDataset
 
-from torch.utils.data import Dataset, DataLoader
-
-from ast import literal_eval 
+###############
+#    Script   #
+###############
 
 if __name__ == "__main__":
-    file_path = 'config/config_TCL.ini'
     config = configparser.ConfigParser(inline_comment_prefixes=(';',))
-    config.read(file_path)
-    
+    config.read(config_path)
+    data_config  = configparser.ConfigParser(inline_comment_prefixes=(';',))
+    data_config.read(data_set_path)
     
     # Read general parameters
     params_general = config['general']
@@ -36,25 +45,38 @@ if __name__ == "__main__":
     weight_decay = params_general.getfloat('weight_decay')
     step_size = params_general.getint('step_size')
     gamma = params_general.getfloat('gamma')
-    save_models = params_general.get('save_models')
+    save_models = str(root_path.joinpath(params_general.get('save_models')))
+    
 
     # Read Dataset parameters 
     params_dataset = config['dataset_info']
-    dataset_train = torch.load(params_dataset["dataset_train"])
-    #dataset_val = torch.load(params_dataset["dataset_val"])
-    #dataset_test = torch.load(params_dataset["dataset_test"])
+    dataset_idx = params_dataset.getint('data_idx')
+
+    dataset_id = f"dataset_{dataset_idx}"
+    params_data = data_config[dataset_id]
+    n_segment = params_data.getint('n_segment')
+    n_point = params_data.getint('n_point_per_segment')
+
+    #train set loading
+    load_params = data_config["dataset"]
+    train_path = str(root_path.joinpath(load_params.get("path_save"), dataset_id ,"dataset_train.pth"))
+    print(f"Train TCL from {train_path}")
+    dataset_train = torch.load(train_path)
+
+
     n_batch_fake = params_dataset.getint('n_batch_stop')
     if n_batch_fake < 0 : 
         n_batch_fake = None
-    n_segment = params_dataset.getint('n_segment')
-    n_point = params_dataset.getint('n_point')
+        
+    # n_segment = params_dataset.getint('n_segment')
+    # n_point = params_dataset.getint('n_point')
     n_patient = params_dataset.getint('n_patient')
     train_loader = DataLoader(dataset_train, batch_size=batch_train, shuffle=True)
     print('Loader train done')
     
     # Read TCL configurations
     tcl_configs = {}
-    for i in range(1,n_models+1): 
+    for i in range(4,n_models+1): 
         name_i = 'TCL_'+str(i)
         print(name_i)
         tcl_i = config[name_i]
@@ -67,6 +89,7 @@ if __name__ == "__main__":
         slope = tcl_i.getfloat('slope')
         save_model_i = save_models + str(i)+ '/model'
         save_params_i = save_models + str(i)+ '/params.pkl'
+        print(f"Save model {save_models}")
         
         directory_path = os.path.dirname(save_params_i)
         # Create directories if they don't exist

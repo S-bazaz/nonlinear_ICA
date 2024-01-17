@@ -20,7 +20,7 @@ from typing import Dict, Optional, Union, BinaryIO, Tuple, List
 ##################
 root_path = Path(os.path.abspath(__file__)).parents[1]
 sys.path.insert(0, str(root_path))
-data_path = root_path.joinpath("raw_data")
+data_path = root_path.joinpath("raw_data", "csv_data")
 
 ##################
 #   denoising    #
@@ -94,7 +94,7 @@ def loader(data_path, name="train"):
 #   Script    #
 ###############
 
-csv_to_processed_pickle(data_path, name="train", ncomp=5)
+# csv_to_processed_pickle(data_path, name="train", ncomp=5)
 
 
 #############
@@ -102,58 +102,58 @@ csv_to_processed_pickle(data_path, name="train", ncomp=5)
 #############
     
 
-#plotting_________________
-import plotly.express as px
-import plotly.graph_objects as go
-import plotly.io as pio
-import seaborn as sns
-pio.renderers.default = "browser"  
-def my_pal(n):
-    return sns.color_palette("Spectral", n).as_hex()
+# #plotting_________________
+# import plotly.express as px
+# import plotly.graph_objects as go
+# import plotly.io as pio
+# import seaborn as sns
+# pio.renderers.default = "browser"  
+# def my_pal(n):
+#     return sns.color_palette("Spectral", n).as_hex()
 
-def plot_signal(vec, title = "signal"):
-    fig = px.line(vec, template = "plotly_dark", title = title)
-    fig.show()
+# def plot_signal(vec, title = "signal"):
+#     fig = px.line(vec, template = "plotly_dark", title = title)
+#     fig.show()
 
-def add_fig(fig, signal, color, name):
-    fig.add_trace(go.Scatter(y=signal, 
-                 mode="lines", 
-                 line=dict(
-                     width=2,
-                     color=color,
-                 ),
-                 opacity = 0.6,
-                 name=name
-                )
-             )
+# def add_fig(fig, signal, color, name):
+#     fig.add_trace(go.Scatter(y=signal, 
+#                  mode="lines", 
+#                  line=dict(
+#                      width=2,
+#                      color=color,
+#                  ),
+#                  opacity = 0.6,
+#                  name=name
+#                 )
+#              )
 
     
-#loading_________________
-tens_train, ids_train, meta_train = loader(data_path, name="train")
+# #loading_________________
+# tens_train, ids_train, meta_train = loader(data_path, name="train")
 
-#les identifiants ici sont dans même ordre
-print(tens_train.shape)
-print(ids_train.shape)
+# #les identifiants ici sont dans même ordre
+# print(tens_train.shape)
+# print(ids_train.shape)
 
-pal = my_pal(8)    
-for i, mat in enumerate(tens_train[:10]):
-    fig = go.Figure(
-        layout=go.Layout(
-            height=600, 
-            width=800, 
-            template = "plotly_dark", 
-            title = f"ACP ecg_id = {ids_train[i]}"
-    ))
+# pal = my_pal(8)    
+# for i, mat in enumerate(tens_train[:10]):
+#     fig = go.Figure(
+#         layout=go.Layout(
+#             height=600, 
+#             width=800, 
+#             template = "plotly_dark", 
+#             title = f"ACP ecg_id = {ids_train[i]}"
+#     ))
 
-    for j, sign in enumerate(mat.T):
-        color = pal[j]
+#     for j, sign in enumerate(mat.T):
+#         color = pal[j]
             
-        fig.add_trace(go.Scatter(y=sign, 
-                            mode="lines", 
-                            line=dict(
-                                width=2,
-                                color=color,
-                            ),
-                            opacity = 0.6
-                        ))  
-    fig.show()
+#         fig.add_trace(go.Scatter(y=sign, 
+#                             mode="lines", 
+#                             line=dict(
+#                                 width=2,
+#                                 color=color,
+#                             ),
+#                             opacity = 0.6
+#                         ))  
+#     fig.show()

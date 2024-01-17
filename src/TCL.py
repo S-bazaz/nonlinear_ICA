@@ -2,20 +2,25 @@ import torch
 import tqdm 
 import copy
 import itertools
-
+import cuda
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
 from torch.autograd import Variable
 
+print("cuda is available =",torch.cuda.is_available())
+# if torch.cuda.is_available():
+#     device = 'cuda:0'
+# else:
+#     device = 'cpu'
 
-
+device = 'cpu'
 # =============================================================================
 # =============================================================================
 def _do_train(model, loader, optimizer, criterion, device, num_batch_to_process = None):
     # training loop
-    model.train()
+    model.to(device=device)
     train_loss = np.zeros(len(loader))
     if num_batch_to_process is None : 
         num_batch_to_process = len(loader)
@@ -29,9 +34,8 @@ def _do_train(model, loader, optimizer, criterion, device, num_batch_to_process 
         batch_x = batch_x.to(device=device, dtype=torch.float32)
         batch_y = batch_y.to(device=device, dtype=torch.int64)
         batch_z = batch_z.to(device=device, dtype=torch.int32)
-      
         logits, _ = model(batch_x, batch_z)
-      
+        
         loss = criterion(logits, batch_y)
 
         loss.backward()
@@ -134,7 +138,8 @@ class tcl(nn.Module):
                  pool_size = 2,
                  slope = .1, 
                  dropout_p = 0.2,
-                 feature_nonlinearity='abs'):
+                 feature_nonlinearity='abs'
+                 ):
         """Build model with a feature-MLP and multi-MLR classifier for each subject
         Args:
             input_dim: (MLP) number of channels
@@ -157,6 +162,9 @@ class tcl(nn.Module):
                        pool_size = pool_size, 
                        slope = slope,
                        dropout_p= dropout_p)
+        
+        
+        self.MLP.to(device)
         
         
         if isinstance(hidden_dim, list):
@@ -183,8 +191,8 @@ class tcl(nn.Module):
             y: labels (batch_size,)
             h: features (batch_size, num_channels)
         """
+        x.to(device=device)
         h = self.MLP(x)
-        
         if self.feature_nonlinearity == 'abs':
             h = torch.abs(h) # Nonlinearity of the last hidden layer (feature value)
             
@@ -196,7 +204,7 @@ class tcl(nn.Module):
 
             # Initialize an empty list to store model predictions
             #predictions = []
-            predictions = torch.zeros((len(patient_id),self.num_class))
+            predictions = torch.zeros((len(patient_id),self.num_class), device=device)
 
             # Iterate over unique values and apply models to corresponding rows
             for k in uniq:

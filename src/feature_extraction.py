@@ -5,6 +5,11 @@ from sklearn.decomposition import FastICA
 from torch.utils.data import Dataset, DataLoader
 from concurrent.futures import ThreadPoolExecutor
 
+# if torch.cuda.is_available():
+#     device = 'cuda:0'
+# else:
+#     device = 'cpu'
+device = 'cpu'
 
 def get_number_windows(shape, w, s):
     """Given a certain length, compute size of output (number of windows)
@@ -115,6 +120,7 @@ def process_batch(batch, model, output_dim, sliding_window, stride, apply_ICA=Fa
     return patient_id[0], features_patient_avg.detach().numpy(), features_patient
 
 def get_features_dataset_parallel(model, output_dim, dataset, sliding_window, stride, T=1000, apply_ICA=False):
+    model.to(device=device)
     batch_size = T
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     n_patient_dataset = len(loader)
@@ -130,4 +136,6 @@ def get_features_dataset_parallel(model, output_dim, dataset, sliding_window, st
         label_patients[i] = patient_id
         features_patients_avg[i, :, :] = features_patient_avg
         features_patients_all[i,:,:] = features_patient.T
-    return label_patients, features_patients_avg, features_patients_all
+    return (torch.tensor(label_patients, device=device), 
+            torch.tensor(features_patients_avg, device=device), 
+            torch.tensor(features_patients_all, device=device) )

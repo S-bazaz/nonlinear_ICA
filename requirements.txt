@@ -1,0 +1,10 @@
+numpy
+PyWavelets
+pandas
+numba
+scikit-learn
+tqdm
+torch
+pathlib
+plotly
+prettytable
