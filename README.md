@@ -1,6 +1,6 @@
 ## Nonlinear ICA
 Our objective is to study feature extraction techniques for multidimensional time series data taken from PTB-XL-Dataset.
-Please dowload the data at *https://www.kaggle.com/datasets/khyeh0719/ptb-xl-dataset-reformatted/data* and store the csv files into **data\raw_data\csv_data\**
+Please dowload the data at *https://www.kaggle.com/datasets/khyeh0719/ptb-xl-dataset-reformatted/data* and store the csv files into **data/raw_data/csv_data/**
 
 ### Wavelet filtration selection
 
@@ -10,8 +10,8 @@ The ondellette filtration study is present in the notebook **0_data_denoising.ip
 
 ### Classification pipelines
 
-In all the following steps, change the configuration using the .ini files in **config\**, then run the associated script in **runs\**. 
-If an issue occure for instance concerning devices conflict, please manage the device definition in **src\** files.
+In all the following steps, change the configuration using the .ini files in **config/**, then run the associated script in **runs/**. 
+If an issue occure for instance concerning devices conflict, please manage the device definition in **src/** files.
 
 #### dataset creation
 
