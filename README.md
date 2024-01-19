@@ -1,10 +1,10 @@
 ## Nonlinear ICA
 Our objective is to study feature extraction techniques for multidimensional time series data taken from PTB-XL-Dataset.
-please dowload the data at *https://www.kaggle.com/datasets/khyeh0719/ptb-xl-dataset-reformatted/data* and store the csv files into **data\raw_data\csv_data\**
+Please dowload the data at *https://www.kaggle.com/datasets/khyeh0719/ptb-xl-dataset-reformatted/data* and store the csv files into **data\raw_data\csv_data\**
 
 ### Wavelet filtration selection
 
-The ondellette filtration study is present in the notebook **0_data_denoising.ipynb**  which motivates the choice of soft thresoholding with Symlet4 used in the pre-processing pipeline.
+The ondellette filtration study is present in the notebook **0_data_denoising.ipynb**  which motivates the choice of soft thresholding with Symlet4 used in the pre-processing pipeline.
 
 ![mode_soft](https://github.com/S-bazaz/nonlinear_ICA/assets/108877488/7b861bac-92e6-40e4-80a1-09a220c366e5)
 
