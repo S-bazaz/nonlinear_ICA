@@ -1,6 +1,6 @@
 ## Nonlinear ICA
 Our objective is to study feature extraction techniques for multidimensional time series data taken from PTB-XL-Dataset.
-please dowload the data at https://www.kaggle.com/datasets/khyeh0719/ptb-xl-dataset-reformatted/data and store the csv files into *data\raw_data\csv_data\*
+please dowload the data at *https://www.kaggle.com/datasets/khyeh0719/ptb-xl-dataset-reformatted/data* and store the csv files into *data\raw_data\csv_data\*
 
 ### Wavelet filtration selection
 
