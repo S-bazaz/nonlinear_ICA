@@ -16,14 +16,16 @@ If an issue occure for instance concerning devices conflict, please manage the d
 #### dataset creation
 
 Manage the segmentation of data in config_dataset.ini to create the datasets used to train and test the models, and run create_dataset.py
+In this section the number of segments and the number of points per segment are fixed for each dataset.
 
 #### TCL train
 
-Manage the TCL architectures in config_TCL.ini and run train_TCL.py
+Manage the TCL architectures in config_TCL.ini and run train_TCL.py for some (or all) datasets create above, the architecture parameters are fixed here.
 
 #### SVM Classification
 
 Manage the ICA subsampling and SVM grid search in config_classif.ini and run make_classif.py
+In this section the grid for SVM is choosen, as well as the desired columns to perform the classification and the window and stride for the averaging.
 ICA is slow, so reduce the data by 50 if you don't have a week or a cluster.
 
 #### Visualization of the results
